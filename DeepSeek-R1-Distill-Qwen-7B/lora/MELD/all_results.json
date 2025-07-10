@@ -1,0 +1,12 @@
+{
+    "epoch": 2.9901697944593386,
+    "eval_MELD_cot_valid_loss": 0.6414400339126587,
+    "eval_MELD_cot_valid_runtime": 58.8858,
+    "eval_MELD_cot_valid_samples_per_second": 16.897,
+    "eval_MELD_cot_valid_steps_per_second": 2.123,
+    "total_flos": 1.3452786157548995e+18,
+    "train_loss": 0.7317431049962198,
+    "train_runtime": 4490.6713,
+    "train_samples_per_second": 5.98,
+    "train_steps_per_second": 0.186
+}

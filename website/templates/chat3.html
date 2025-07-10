@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Interface</title>
+    <style>
+        /* 设置背景 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #5D3FD3, #6A82FB);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .chat-app {
+            display: flex;
+            width: 800px;
+            height: 500px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 200px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #e0e0e0;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            padding: 8px;
+            margin-bottom: 5px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar ul li:hover {
+            background-color: #ced4da;
+        }
+
+        .sidebar ul li.active-chat {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        /* 聊天容器样式 */
+        .chat-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 2px solid #f0f0f0;
+            background-color: #f9f9f9;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
+        .chat-box .message {
+            margin: 10px 0;
+            padding: 8px 12px;
+            border-radius: 10px;
+            max-width: 70%;
+            position: relative;
+        }
+
+        .chat-box .message .speaker-name {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .chat-box .message.user {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-top-left-radius: 0;
+        }
+
+        .chat-box .message.chatgpt {
+            background-color: #28a745;
+            color: white;
+            align-self: flex-start;
+            border-top-right-radius: 0;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 10px;
+            background-color: #fff;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-container input {
+            flex-grow: 1;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 30px;
+            outline: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-container button {
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-left: 15px;
+        }
+
+        .input-container button:hover {
+            background-color: #0056b3;
+        }
+
+        .chat-box {
+            scroll-behavior: smooth;
+        }
+
+        /* 恢复封面部分样式 */
+        .cover-container {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            width: 400px;
+        }
+
+        .cover-container h1 {
+            font-size: 30px;
+            margin-bottom: 20px;
+        }
+
+        .cover-container button {
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .cover-container button:hover {
+            background-color: #0056b3;
+        }
+
+        .active-chat {
+            background-color: #d0d0d0;
+        }
+
+        /* 思考过程样式 */
+        .thinking {
+            background-color: #f0f8ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-style: italic;
+            color: #555;
+            border-left: 3px solid #4a6fa5;
+            white-space: pre-wrap;
+            /* 保留换行和空格 */
+            width: 90%;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 封面页面 -->
+    <div class="cover-container" id="cover-container">
+        <h1>Chat Interface</h1>
+        <button onclick="startChat()">Start!</button>
+    </div>
+
+    <div class="chat-app" style="display: none;">
+        <!-- 侧边栏 -->
+        <div class="sidebar" id="sidebar">
+            <h2>History</h2>
+            <ul id="chat-history">
+                <!-- 历史对话条目 -->
+            </ul>
+        </div>
+
+        <!-- 聊天界面 -->
+        <div class="chat-container" id="chat-container">
+            <div class="chat-box" id="chat-box">
+                <!-- 聊天消息显示区域 -->
+            </div>
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="text..."
+                    onkeypress="if(event.keyCode === 13) sendMessage()" />
+                <button onclick="sendMessage()">SEND!</button>
+                <button onclick="newChat()">NEW CHAT</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 存储所有对话的数组，每个对话是一个包含消息的数组
+        let conversations = [];
+        // 当前活动对话的索引
+        let activeConversationIndex = -1;
+        // 当前正在生成的消息元素
+        let currentMessageElement = null;
+        // 当前正在生成的思考元素
+        let currentThinkingElement = null;
+        // 是否已经切换到响应模式（从思考模式切换）
+        let switchedToResponseMode = false;
+        // 是否正在接收响应
+        let isReceiving = false;
+        // 定义在更高作用域
+        let fullResponse = '';
+        let fullThinking = '';
+        let responseText = '';
+
+        // 启动聊天
+        function startChat() {
+            document.getElementById('cover-container').style.display = 'none';  // 隐藏封面
+            document.querySelector('.chat-app').style.display = 'flex';   // 显示聊天界面
+            // 创建第一个对话
+            newChat();
+        }
+
+        // 发送消息
+        function sendMessage() {
+            var userMessage = document.getElementById('user-input').value;
+            if (userMessage.trim() === "" || activeConversationIndex === -1 || isReceiving) return;
+
+            // 在聊天框中显示用户消息
+            appendMessage(userMessage, 'user');
+
+            // 清空输入框
+            document.getElementById('user-input').value = '';
+
+            // 创建思考过程元素
+            currentThinkingElement = document.createElement('div');
+            currentThinkingElement.classList.add('thinking');
+            document.getElementById('chat-box').appendChild(currentThinkingElement);
+
+            // 重置状态
+            switchedToResponseMode = false;
+            currentMessageElement = null;
+
+            // 初始化空的回复内容
+            fullResponse = '';
+            fullThinking = '';
+            responseText = '';
+            isReceiving = true;
+
+            console.log("开始请求:", userMessage);
+
+            // 使用fetch API进行流式请求
+            fetch('/stream_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'message=' + encodeURIComponent(userMessage) + '&conversationId=' + activeConversationIndex
+            })
+                .then(response => {
+                    console.log("收到初始响应:", response.status);
+                    if (!response.ok) {
+                        throw new Error('网络响应不正常: ' + response.status);
+                    }
+
+                    // 获取reader来读取流数据
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    // 读取并处理数据
+                    function readStream() {
+                        reader.read().then(({ done, value }) => {
+                            if (done) {
+                                console.log("流读取完成");
+                                isReceiving = false;
+
+                                // 如果存在思考内容但没有切换到响应模式，创建响应元素
+                                if (!switchedToResponseMode && fullThinking.includes('</think>')) {
+                                    createResponseElement();
+                                }
+
+                                // 如果没有响应内容，显示错误消息
+                                if (!currentMessageElement) {
+                                    currentMessageElement = createMessageElement('无响应', 'chatgpt');
+                                    document.getElementById('chat-box').appendChild(currentMessageElement);
+                                } else if (currentMessageElement.textContent.trim() === '') {
+                                    currentMessageElement.textContent = '无响应';
+                                }
+
+                                // 保存对话内容
+                                conversations[activeConversationIndex].messages.push({
+                                    user: userMessage,
+                                    chatgpt: currentMessageElement ? currentMessageElement.textContent : '无响应',
+                                    thinking: fullThinking
+                                });
+                                return;
+                            }
+
+                            // 解码数据
+                            const chunk = decoder.decode(value, { stream: true });
+                            console.log("接收到数据块，长度:", chunk.length);
+
+                            // 处理数据块
+                            processStreamChunk(chunk);
+
+                            // 继续读取
+                            readStream();
+                        }).catch(error => {
+                            console.error('读取流错误:', error);
+                            isReceiving = false;
+
+                            // 如果当前没有消息元素，创建一个
+                            if (!currentMessageElement) {
+                                currentMessageElement = createMessageElement('读取响应时出错: ' + error.message, 'chatgpt');
+                                document.getElementById('chat-box').appendChild(currentMessageElement);
+                            } else {
+                                currentMessageElement.textContent = '读取响应时出错: ' + error.message;
+                            }
+
+                            // 保存对话内容
+                            conversations[activeConversationIndex].messages.push({
+                                user: userMessage,
+                                chatgpt: '读取响应时出错: ' + error.message,
+                                thinking: fullThinking
+                            });
+                        });
+                    }
+
+                    // 开始读取
+                    readStream();
+                })
+                .catch(error => {
+                    console.error('请求错误:', error);
+                    isReceiving = false;
+
+                    // 创建错误消息元素
+                    currentMessageElement = createMessageElement('连接错误: ' + error.message, 'chatgpt');
+                    document.getElementById('chat-box').appendChild(currentMessageElement);
+
+                    // 保存对话内容
+                    conversations[activeConversationIndex].messages.push({
+                        user: userMessage,
+                        chatgpt: '连接错误: ' + error.message,
+                        thinking: ''
+                    });
+                });
+        }
+
+        // 创建响应元素（从思考模式切换到回复模式时调用）
+        function createResponseElement() {
+            // 只有第一次切换时创建新元素
+            if (!switchedToResponseMode) {
+                currentMessageElement = createMessageElement('', 'chatgpt');
+                document.getElementById('chat-box').appendChild(currentMessageElement);
+                switchedToResponseMode = true;
+                console.log("已切换到响应模式，创建了新的消息元素");
+            }
+        }
+
+        // 处理流数据块
+        function processStreamChunk(chunk) {
+            try {
+                console.log("收到数据块:", chunk);
+                // 分割数据行
+                const lines = chunk.split('\n');
+
+                for (let line of lines) {
+                    if (!line.trim()) continue;  // 跳过空行
+
+                    console.log("处理行:", line);
+
+                    if (line.startsWith('data: ')) {
+                        // 提取数据部分
+                        const data = line.substring(6);
+                        console.log("数据部分:", data);
+
+                        if (data === '[DONE]') {
+                            console.log("收到完成信号");
+                            isReceiving = false;
+                            return;
+                        }
+
+                        try {
+                            const parsed = JSON.parse(data);
+                            console.log("解析的JSON:", parsed);
+
+                            if (parsed.error) {
+                                console.error("API错误:", parsed.error);
+
+                                // 确保有一个消息元素显示错误
+                                if (!currentMessageElement) {
+                                    currentMessageElement = createMessageElement('错误: ' + parsed.error, 'chatgpt');
+                                    document.getElementById('chat-box').appendChild(currentMessageElement);
+                                } else {
+                                    currentMessageElement.textContent = '错误: ' + parsed.error;
+                                }
+
+                                isReceiving = false;
+                                return;
+                            }
+
+                            // 处理思考内容
+                            if (parsed.thinking !== undefined) {
+                                fullThinking += parsed.thinking;
+
+                                // 检查是否包含</think>标记
+                                if (fullThinking.includes('</think>') && !switchedToResponseMode) {
+                                    // 设置思考内容到</think>为止
+                                    const thinkEndIndex = fullThinking.indexOf('</think>') + '</think>'.length;
+                                    const thinkingPart = fullThinking.substring(0, thinkEndIndex);
+
+                                    if (currentThinkingElement) {
+                                        currentThinkingElement.textContent = thinkingPart;
+                                    }
+
+                                    // 切换到响应模式
+                                    createResponseElement();
+
+                                    // 如果思考内容后还有文本，将其添加到响应中
+                                    if (fullThinking.length > thinkEndIndex) {
+                                        const responseAfterThinking = fullThinking.substring(thinkEndIndex);
+                                        responseText += responseAfterThinking;
+                                        if (currentMessageElement) {
+                                            currentMessageElement.textContent = responseText;
+                                        }
+                                    }
+                                } else if (!switchedToResponseMode) {
+                                    // 仍在思考模式
+                                    if (currentThinkingElement) {
+                                        currentThinkingElement.textContent = fullThinking;
+                                        document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+                                    }
+                                } else {
+                                    // 已经切换到响应模式，将后续内容添加到响应
+                                    responseText += parsed.thinking;
+                                    if (currentMessageElement) {
+                                        currentMessageElement.textContent = responseText;
+                                        document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+                                    }
+                                }
+                            }
+
+                            // 标记思考结束
+                            if (parsed.thinking_done) {
+                                if (!switchedToResponseMode) {
+                                    createResponseElement();
+                                }
+                            }
+
+                            // 处理回答内容
+                            if (parsed.content !== undefined) {
+                                // 如果尚未切换到响应模式，立即切换
+                                if (!switchedToResponseMode) {
+                                    createResponseElement();
+                                }
+
+                                // 追加响应内容
+                                responseText += parsed.content;
+                                fullResponse += parsed.content;
+
+                                // 更新显示的消息
+                                if (currentMessageElement) {
+                                    currentMessageElement.textContent = responseText;
+                                    document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+                                }
+                            }
+
+                            // 处理最终话语
+                            if (parsed.final_utterance !== undefined) {
+                                // 确保有一个消息元素
+                                if (!switchedToResponseMode) {
+                                    createResponseElement();
+                                }
+
+                                // 更新最终响应
+                                fullResponse = parsed.final_utterance;
+                                currentMessageElement.textContent = parsed.final_utterance;
+                                document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+                            }
+                        } catch (e) {
+                            console.warn('解析JSON失败:', e, data);
+                        }
+                    } else {
+                        console.log("非数据行:", line);
+                    }
+                }
+            } catch (e) {
+                console.error('处理数据块错误:', e);
+            }
+        }
+
+        // 创建消息元素
+        function createMessageElement(message, sender) {
+            var messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender);
+
+            // 创建说话者名字元素
+            var speakerName = document.createElement('div');
+            speakerName.classList.add('speaker-name');
+            speakerName.textContent = sender === 'user' ? 'Monica' : 'Chandler';
+
+            // 创建消息内容元素
+            var messageContent = document.createElement('div');
+            messageContent.textContent = message;
+
+            // 将名字和内容添加到消息元素中
+            messageElement.appendChild(speakerName);
+            messageElement.appendChild(messageContent);
+
+            return messageElement;
+        }
+
+        // 启动新对话
+        function newChat() {
+            // 如果正在接收响应，不允许创建新对话
+            if (isReceiving) return;
+
+            // 创建新的对话对象
+            const newConversation = {
+                id: conversations.length,
+                title: 'SESSION ' + (conversations.length + 1),
+                messages: []
+            };
+
+            // 添加到对话数组
+            conversations.push(newConversation);
+
+            // 更新活动对话索引
+            activeConversationIndex = conversations.length - 1;
+
+            // 清空聊天框
+            document.getElementById('chat-box').innerHTML = '';
+
+            // 添加新对话到历史记录
+            var chatHistory = document.getElementById('chat-history');
+            var newChatItem = document.createElement('li');
+            newChatItem.textContent = newConversation.title;
+            newChatItem.dataset.conversationId = newConversation.id;
+
+            newChatItem.onclick = function () {
+                // 如果正在接收响应，不允许切换对话
+                if (isReceiving) return;
+
+                // 获取对话索引
+                const conversationId = parseInt(this.dataset.conversationId);
+                // 切换到该对话
+                switchToConversation(conversationId);
+            };
+
+            chatHistory.appendChild(newChatItem);
+
+            // 高亮这个新创建的对话
+            highlightActiveChat(newChatItem);
+        }
+
+        // 切换到指定对话
+        function switchToConversation(conversationId) {
+            // 更新活动对话索引
+            activeConversationIndex = conversationId;
+
+            // 高亮选中的对话
+            const selectedItem = document.querySelector(`#chat-history li[data-conversation-id="${conversationId}"]`);
+            highlightActiveChat(selectedItem);
+
+            // 显示该对话的内容
+            displayConversation(conversations[conversationId]);
+        }
+
+        // 显示指定对话的内容
+        function displayConversation(conversation) {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';
+
+            if (conversation && conversation.messages) {
+                conversation.messages.forEach(message => {
+                    appendMessage(message.user, 'user');
+
+                    // 如果有思考内容，显示思考过程
+                    if (message.thinking) {
+                        const thinkingElement = document.createElement('div');
+                        thinkingElement.classList.add('thinking');
+                        thinkingElement.textContent = message.thinking;
+                        chatBox.appendChild(thinkingElement);
+                    }
+
+                    appendMessage(message.chatgpt, 'chatgpt');
+                });
+            }
+        }
+
+        // 高亮选中的对话
+        function highlightActiveChat(selectedItem) {
+            // 移除所有对话的高亮
+            const items = document.querySelectorAll('#chat-history li');
+            items.forEach(item => {
+                item.classList.remove('active-chat');
+            });
+
+            // 添加高亮到选中的对话
+            selectedItem.classList.add('active-chat');
+        }
+
+        // 添加消息到聊天框
+        function appendMessage(message, sender) {
+            var messageElement = createMessageElement(message, sender);
+            document.getElementById('chat-box').appendChild(messageElement);
+            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+        }
+
+        // 页面加载完毕后自动启动聊天
+        window.onload = function () {
+            startChat();
+        };
+    </script>
+
+</body>
+
+</html>
